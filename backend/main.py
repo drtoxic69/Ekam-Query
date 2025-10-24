@@ -1,12 +1,12 @@
 import logging
+
 from fastapi import FastAPI, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
+from backend.api.routes import ingestion, query, schema
 from backend.core.config import settings
 from backend.db.sessions import AsyncSessionFactory
-
-from backend.api.routes import ingestion, query, schema
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,11 +47,6 @@ async def db_health_check():
     """
     A robust health check endpoint.
     It verifies database connectivity by performing a simple query.
-
-    Why this is robust:
-    - It uses its own session to avoid transactional dependencies (like deps.py).
-    - It explicitly returns a 503 (Service Unavailable) on failure.
-    - It guarantees the session is closed in all cases.
     """
     session: AsyncSession | None = None
 
