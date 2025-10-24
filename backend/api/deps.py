@@ -1,5 +1,6 @@
 import logging
 from typing import AsyncGenerator
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,14 +12,12 @@ logger = logging.getLogger(__name__)
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    FastAPI dependency to create and yield a database session with
-    automatic transaction management (commit-on-success, rollback-on-failure).
+    FastAPI dependency to create and yield a database session.
     """
     session: AsyncSession = AsyncSessionFactory()
 
     try:
         yield session
-        await session.commit()
 
     except SQLAlchemyError as sql_exc:
         logger.error(f"Database error during request: {sql_exc}", exc_info=True)
