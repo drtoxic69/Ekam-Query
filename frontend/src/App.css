@@ -1,0 +1,187 @@
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Base styles for the main application container */
+.appContainer {
+  width: 100%;
+  max-width: 1000px; /* Max width for content */
+  margin: 40px auto; /* More vertical margin, centered horizontally */
+  padding: 30px 40px; /* Increased padding */
+  background-color: #282c34; /* Slightly different dark shade */
+  border-radius: 12px; /* More rounded corners */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); /* Enhanced shadow */
+  border: 1px solid #3a3f4a; /* Subtle border */
+  color: #abb2bf; /* Lighter grey text for better contrast */
+}
+
+/* Header Styling */
+.appHeader {
+  text-align: center;
+  margin-bottom: 40px;
+  border-bottom: 1px solid #4a4f5a; /* Separator line */
+  padding-bottom: 20px;
+}
+
+.appHeader h1 {
+  color: #61afef; /* Light blue accent */
+  font-size: 2.5em; /* Adjust size */
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.appHeader p {
+  color: #7f848e; /* Subdued subtitle color */
+  font-size: 1.1em;
+  margin-top: 0;
+}
+
+/* Section Styling */
+.appSection {
+  margin-bottom: 40px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid #4a4f5a; /* Separator line */
+}
+.appSection:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.appSection h2 {
+  color: #98c379; /* Green accent for section titles */
+  margin-top: 0;
+  margin-bottom: 25px; /* More space below title */
+  font-size: 1.6em;
+  font-weight: 500;
+  border-left: 4px solid #98c379; /* Accent line on the left */
+  padding-left: 15px;
+}
+
+/* Loading/Error/Initial Message Styling */
+.loadingIndicator,
+.errorMessage,
+.initialMessage {
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.loadingIndicator {
+  font-style: italic;
+  color: #a0a0a0;
+  background-color: #3a3f4a;
+  border: 1px dashed #5c6370;
+}
+
+.errorMessage {
+  color: #ff9a9e; /* Light red/pink text */
+  background-color: #4d2f2f; /* Dark red background */
+  border: 1px solid #e57373; /* Red border */
+}
+.errorMessage strong {
+  color: #ffcdd2; /* Lighter red for 'Error:' */
+}
+
+.initialMessage {
+  color: #a0a0a0;
+  background-color: #3a3f4a;
+  border: 1px dashed #5c6370;
+}
+
+/* --- Global Element Refinements --- */
+
+/* Improved Button Styling */
+button {
+  background-color: #4e5666; /* Medium grey-blue */
+  color: #e0e0e0;
+  border: 1px solid transparent; /* Remove default border */
+  padding: 10px 18px; /* Slightly larger padding */
+  font-size: 1em;
+  font-weight: 500;
+  border-radius: 6px; /* Consistent rounding */
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+}
+button:hover {
+  background-color: #5a6375; /* Lighter on hover */
+  transform: translateY(-1px); /* Subtle lift */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+button:active {
+  transform: translateY(0px); /* Press down effect */
+}
+button:disabled {
+  background-color: #3a3f4a;
+  color: #7f848e;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Improved Input Styling */
+input[type="text"] {
+  background-color: #21252b; /* Darker input background */
+  color: #abb2bf;
+  border: 1px solid #4a4f5a;
+  padding: 12px 15px; /* Larger padding */
+  border-radius: 6px;
+  font-size: 1em;
+  flex-grow: 1; /* Allow input to grow */
+}
+input[type="text"]:focus {
+  outline: none;
+  border-color: #61afef; /* Blue border on focus */
+  box-shadow: 0 0 0 2px rgba(97, 175, 239, 0.3);
+}
+
+input[type="file"] {
+  background-color: transparent; /* Make background transparent */
+  color: #abb2bf;
+  border: 1px dashed #5c6370; /* Dashed border for file input */
+  padding: 15px;
+  border-radius: 6px;
+  font-size: 0.95em;
+  display: block; /* Ensure it takes full width */
+  width: calc(100% - 32px); /* Adjust width considering padding */
+}
+input[type="file"]::file-selector-button {
+  background-color: #4e5666;
+  color: #e0e0e0;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 15px;
+  transition: background-color 0.2s ease;
+}
+input[type="file"]::file-selector-button:hover {
+  background-color: #5a6375;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid #4a4f5a; /* Consistent separator color */
+  margin: 40px 0; /* Consistent vertical spacing */
+}
+
+/* Optional: Style scrollbars for a darker look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #282c34;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #5c6370;
+  border-radius: 4px;
+  border: 2px solid #282c34;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #7f848e;
+}
