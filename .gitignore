@@ -320,3 +320,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# chromadb 
+vectordb/
