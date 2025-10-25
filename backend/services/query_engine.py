@@ -18,16 +18,28 @@ logger = logging.getLogger(__name__)
 try:
     logger.info("Loading Text-to-SQL model...")
 
-    SQL_MODEL_NAME = "cssupport/t5-small-awesome-text-to-sql"
+    SQL_MODEL_NAME = "gaussalgo/T5-LM-Large-text2sql-spider"
     SQL_TOKENIZER = T5Tokenizer.from_pretrained(SQL_MODEL_NAME)
     SQL_MODEL = T5ForConditionalGeneration.from_pretrained(SQL_MODEL_NAME)
 
     logger.info("Text-to-SQL model loaded.")
     logger.info("Loading Query Classification model...")
 
-    CLASSIFIER = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-
+    CLASSIFIER_MODEL_NAME = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"
+    CLASSIFIER = pipeline(
+        "zero-shot-classification",
+        model=CLASSIFIER_MODEL_NAME,
+    )
     logger.info("Query Classification model loaded.")
+
+    logger.info("Loading Question Answering model...")
+    QA_MODEL_NAME = "deepset/roberta-base-squad2"
+    QA_PIPELINE = pipeline(
+        "question-answering",
+        model=QA_MODEL_NAME,
+        tokenizer=QA_MODEL_NAME,
+    )
+    logger.info("Question Answering model loaded.")
 
 except Exception as e:
     logger.critical(f"Failed to load local ML models: {e}", exc_info=True)
@@ -238,68 +250,76 @@ class QueryEngineService:
             )
 
     async def _execute_document_query(self, query: str) -> List[DocumentResult]:
-        """Performs a vector search on the document collection."""
-
+        """
+        Performs vector search and then uses a QA model to extract an answer.
+        """
         try:
             query_embedding = await asyncio.to_thread(
                 self.embedding_model.encode, [query]
             )
 
             results = self.vector_collection.query(
-                query_embeddings=query_embedding.tolist(), n_results=5
+                query_embeddings=query_embedding.tolist(),
+                n_results=1,
             )
 
-            docs = []
-
             if not results or not results.get("ids") or not results["ids"][0]:
-                logger.info("No relevant document chunks found.")
+                logger.info("No relevant document chunks found for QA.")
                 return []
 
-            result_ids = results["ids"][0]
-            result_documents_list = results.get("documents")
-            result_metadatas_list = results.get("metadatas")
-            result_distances_list = results.get("distances")
+            top_chunk_id = results["ids"][0][0]
+            top_chunk_doc = (
+                results["documents"][0][0]
+                if results.get("documents") and results["documents"][0]
+                else ""
+            )
+            top_chunk_meta = (
+                results["metadatas"][0][0]
+                if results.get("metadatas") and results["metadatas"][0]
+                else {}
+            )
+            top_chunk_dist = (
+                results["distances"][0][0]
+                if results.get("distances") and results["distances"][0]
+                else 0.0
+            )
 
-            if (
-                not result_documents_list
-                or not result_metadatas_list
-                or not result_distances_list
-            ):
-                logger.error(
-                    "ChromaDB results missing documents, metadatas, or distances list."
+            if not top_chunk_doc:
+                logger.warning(
+                    f"ChromaDB returned result with empty document content for ID {top_chunk_id}"
                 )
                 return []
 
-            result_documents = result_documents_list[0]
-            result_metadatas = result_metadatas_list[0]
-            result_distances = result_distances_list[0]
+            qa_input = {"question": query, "context": top_chunk_doc}
+            logger.info(
+                f"Running QA model on context from {top_chunk_meta.get('source_file', 'unknown')}_{top_chunk_meta.get('chunk_index', 0)}"
+            )
 
-            if not (
-                len(result_ids)
-                == len(result_documents)
-                == len(result_metadatas)
-                == len(result_distances)
-            ):
-                logger.error("ChromaDB result lists have inconsistent lengths.")
-                return []
+            qa_result = await asyncio.to_thread(QA_PIPELINE, qa_input)
 
-            for i in range(len(result_ids)):
-                metadata = result_metadatas[i] or {}
-                source_file = str(metadata.get("source_file", "unknown"))
-                chunk_index = int(metadata.get("chunk_index", 0))
+            logger.info(
+                f"QA model result: score={qa_result.get('score', 0.0):.4f}, answer='{qa_result.get('answer', '')}'"
+            )
 
-                docs.append(
-                    DocumentResult(
-                        source_file=source_file,
-                        chunk_index=chunk_index,
-                        content=str(result_documents[i]),
-                        similarity_score=float(result_distances[i]),
-                    )
+            if qa_result and qa_result.get("score", 0.0) > 0.1:
+                extracted_answer = qa_result["answer"]
+
+            else:
+                extracted_answer = (
+                    "Could not find a specific answer in the relevant document section."
                 )
-            return docs
+
+            doc_result = DocumentResult(
+                source_file=str(top_chunk_meta.get("source_file", "unknown")),
+                chunk_index=int(top_chunk_meta.get("chunk_index", 0)),
+                answer=extracted_answer,
+                similarity_score=float(top_chunk_dist),
+                # context=top_chunk_doc # Optional: include context
+            )
+            return [doc_result]
 
         except Exception as e:
-            logger.error(f"Error during document query: {e}", exc_info=True)
+            logger.error(f"Error during document query and QA: {e}", exc_info=True)
             return []
 
     def _create_schema_prompt(self, schema: SchemaResponse) -> str:
