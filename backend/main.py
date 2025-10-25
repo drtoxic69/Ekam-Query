@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
@@ -25,7 +26,22 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DATABASE_ECHO else None,
 )
 
+origins = [
+    "http://localhost",  # Allow general localhost
+    "http://localhost:5173",  # Allow Vite default dev server
+    "http://127.0.0.1:5173",  # Allow Vite default dev server (alternative)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # List of origins allowed to make requests
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
 logger.info("FastAPI application instance created.")
+logger.info(f"CORS enabled for origins: {origins}")
 
 app.include_router(ingestion.router, prefix="/api", tags=["Ingestion"])
 app.include_router(query.router, prefix="/api", tags=["Query"])
