@@ -42,7 +42,7 @@ class DocumentResult(BaseModel):
     chunk_index: int = Field(
         ..., description="The index of the chunk within the source file."
     )
-    content: str = Field(..., description="The text content of the matching chunk.")
+    answer: str = Field(..., description="The extracted answer to the query.")
     similarity_score: float = Field(
         ..., description="The relevance score from the vector search."
     )

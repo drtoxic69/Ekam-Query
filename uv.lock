@@ -300,7 +300,7 @@ dev = [
 requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "chromadb", specifier = "~=0.5.4" },
-    { name = "fastapi", specifier = ">=0.119.1" },
+    { name = "fastapi", extras = ["cors"], specifier = ">=0.119.1" },
     { name = "greenlet", specifier = ">=3.2.4" },
     { name = "pydantic", specifier = "~=2.12.3" },
     { name = "pydantic-settings", specifier = ">=2.11.0" },
