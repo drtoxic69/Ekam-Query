@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from pathlib import Path
 from typing import IO, List
 
@@ -169,23 +170,68 @@ class DocumentProcessorService:
 
     def _dynamic_chunking(self, content: str, content_type: str | None) -> List[str]:
         """
-        Intelligently chunks text based on document structure.
+        Intelligently chunks text, prioritizing paragraphs and basic sections,
+        with optional size limits.
         """
         logger.debug(f"Chunking document of type {content_type}")
+        chunks = []
 
-        chunks = content.split(
-            "\n\n"
-        )  # Add two new lines for 'better' chunking process
+        potential_sections = re.split(
+            r"(\n(?:[A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*):?\s*\n)", content
+        )
 
-        final_chunks = []
-        for chunk in chunks:
-            chunk = chunk.strip()
-            if not chunk:
+        for section in potential_sections:
+            if not section or section.isspace():
                 continue
 
-            final_chunks.append(chunk)
+            if (
+                re.match(
+                    r"^(?:[A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*):?\s*$", section.strip()
+                )
+                and len(section.strip()) < 50
+            ):
+                pass  # Simple approach: treat header as part of the section split
 
-        return final_chunks
+            paragraphs = section.split("\n\n")
+
+            for paragraph in paragraphs:
+                para_clean = paragraph.strip()
+                if not para_clean:
+                    continue
+
+                MAX_CHUNK_CHARS = 1000  # Example limit, tune as needed
+                if len(para_clean) > MAX_CHUNK_CHARS:
+                    logger.debug(
+                        f"Paragraph too long ({len(para_clean)} chars), splitting by sentences."
+                    )
+                    sentences = re.split(
+                        r"(?<=[.!?])\s+", para_clean
+                    )  # Split after ., !, ?
+                    current_sub_chunk = ""
+
+                    for sentence in sentences:
+                        sentence = sentence.strip()
+                        if not sentence:
+                            continue
+                        # If adding sentence exceeds limit (with buffer), start new sub-chunk
+                        if (
+                            len(current_sub_chunk) + len(sentence) + 1 > MAX_CHUNK_CHARS
+                            and current_sub_chunk
+                        ):
+                            chunks.append(current_sub_chunk)
+                            current_sub_chunk = sentence
+                        else:
+                            current_sub_chunk += (
+                                " " if current_sub_chunk else ""
+                            ) + sentence
+                    if current_sub_chunk:  # Add the last sub-chunk
+                        chunks.append(current_sub_chunk)
+                else:
+                    # Paragraph is within size limits, add it directly
+                    chunks.append(para_clean)
+
+        logger.info(f"Created {len(chunks)} chunks using dynamic chunking.")
+        return chunks
 
     def _bytes_to_file_like(self, content: bytes) -> IO[bytes]:
         """Utility to convert bytes to a file-like object for pypdf/docx."""
