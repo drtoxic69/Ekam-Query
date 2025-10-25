@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def get_query_engine_service(
+    db: AsyncSession = Depends(get_db_session),
+) -> QueryEngineService:
+    """Dependency to create a QueryEngineService instance per request."""
+    return QueryEngineService(db)
+
+
 @router.post(
     "/query",
     response_model=QueryResponse,
@@ -21,7 +28,8 @@ router = APIRouter()
     tags=["Query"],
 )
 async def process_query_endpoint(
-    request: QueryRequest, db: AsyncSession = Depends(get_db_session)
+    request: QueryRequest,
+    service: QueryEngineService = Depends(get_query_engine_service),
 ):
     """
     Endpoint to handle a user's natural language query.
@@ -30,17 +38,10 @@ async def process_query_endpoint(
     logger.info(f"Processing query: {request.query}")
 
     try:
-        # 1. Initialize the service with the database session
-        service = QueryEngineService(db)
-
-        # 2. Call the service to do all the hard work
         response = await service.process_query(request.query)
-
-        # 3. Return the successful response
         return response
 
     except Exception as e:
-        # 4. Catch any unexpected errors from the service
         logger.error(f"Failed to process query '{request.query}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
