@@ -72,3 +72,7 @@ class QueryResponse(BaseModel):
         default={},
         description="Server-side performance timing (e.g., {'total_time': 1.23}).",
     )
+
+    cache_status: Literal["hit", "miss"] | None = Field(
+        default=None, description="Indicates whether the response came from the cache."
+    )
