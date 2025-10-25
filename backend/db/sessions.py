@@ -13,20 +13,16 @@ try:
         echo=settings.DATABASE_ECHO,
         pool_size=settings.DATABASE_POOL_SIZE,
         max_overflow=0,
-        pool_recycle=3600,  # recycles connections after an hour
+        pool_recycle=3600,
         pool_pre_ping=True,
     )
 
     AsyncSessionFactory = async_sessionmaker(
-        bind=async_engine,
-        autoflush=False,
-        expire_on_commit=False,
-        class_=AsyncSession,
+        bind=async_engine, autoflush=False, expire_on_commit=False, class_=AsyncSession
     )
 
     logger.info("Async database engine and session factory created successfully.")
 
 except SQLAlchemyError as e:
-    # This will catch errors in engine configuration (e.g., bad driver)
     logger.error(f"Failed to create database engine. Error: {e}")
     raise RuntimeError(f"Could not initialize database engine: {e}")

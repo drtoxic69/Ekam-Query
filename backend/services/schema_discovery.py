@@ -2,10 +2,10 @@ import logging
 from typing import Any, Dict, List, Set
 
 from sqlalchemy import inspect
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session as SyncSession
 
+from backend.db.sessions import async_engine
 from backend.schemas.schema import (
     ColumnDetail,
     ConstraintDetail,
@@ -19,66 +19,49 @@ logger = logging.getLogger(__name__)
 
 class SchemaDiscoveryService:
     """
-    Handles the logic for dynamically discovering the database schema.
+    Handles schema discovery using its own connection from the engine.
     """
 
-    def __init__(self, db: AsyncSession):
-        """
-        Initializes the service with the current database session.
-        """
-        self.db = db
+    def __init__(self):
+        pass
 
-    def _get_schema_details_sync(
-        self, sync_session: SyncSession
-    ) -> List[Dict[str, Any]]:
-        """
-        Synchronous helper function to perform all database inspection.
-        This function is designed to be run inside `db.run_sync()`.
-
-        Args:
-            sync_session: A synchronous SQLAlchemy Session object
-                          provided by `run_sync`.
-
-        Returns:
-            A list of dictionaries, each containing the raw schema
-            details for one table.
-        """
+    def _get_schema_details_sync(self, conn: Connection) -> List[Dict[str, Any]]:
+        """Synchronous helper function to perform inspection."""
         logger.debug("Running synchronous schema inspection...")
+        inspector = inspect(conn)
+        table_names = inspector.get_table_names()
+        all_tables_data = []
 
-        with sync_session.connection() as connection:
-            inspector = inspect(connection)
-            table_names = inspector.get_table_names()
-            all_tables_data = []
-
-            for table_name in table_names:
-                all_tables_data.append(
-                    {
-                        "name": table_name,
-                        "columns": inspector.get_columns(table_name),
-                        "pk_constraint": inspector.get_pk_constraint(table_name),
-                        "fks": inspector.get_foreign_keys(table_name),
-                        "constraints": inspector.get_unique_constraints(table_name),
-                        "indexes": inspector.get_indexes(table_name),
-                    }
-                )
-
+        for table_name in table_names:
+            all_tables_data.append(
+                {
+                    "name": table_name,
+                    "columns": inspector.get_columns(table_name),
+                    "pk_constraint": inspector.get_pk_constraint(table_name),
+                    "fks": inspector.get_foreign_keys(table_name),
+                    "constraints": inspector.get_unique_constraints(table_name),
+                    "indexes": inspector.get_indexes(table_name),
+                }
+            )
         logger.debug(f"Sync inspection found {len(all_tables_data)} tables.")
 
         return all_tables_data
 
     async def analyze_database(self) -> SchemaResponse:
-        """
-        Analyzes the database schema in an async-safe way.
-        """
-        logger.info("Starting database schema analysis...")
+        """Analyzes the database schema using a direct connection."""
+        logger.info(
+            "Starting database schema analysis using direct engine connection..."
+        )
 
         try:
-            all_tables_data = await self.db.run_sync(self._get_schema_details_sync)
+            async with async_engine.connect() as connection:
+                all_tables_data = await connection.run_sync(
+                    self._get_schema_details_sync
+                )
 
             logger.info(f"Successfully discovered {len(all_tables_data)} tables.")
 
             discovered_tables: List[TableDetail] = []
-
             for table_data in all_tables_data:
                 table_name = table_data["name"]
                 logger.debug(f"Parsing schema for table: {table_name}")
@@ -92,7 +75,6 @@ class SchemaDiscoveryService:
                     foreign_key_to = self._find_foreign_key(
                         col["name"], table_data["fks"]
                     )
-
                     table_columns.append(
                         ColumnDetail(
                             name=col["name"],
@@ -139,7 +121,7 @@ class SchemaDiscoveryService:
             raise
 
     def _find_foreign_key(self, col_name: str, fks: List[Dict[str, Any]]) -> str | None:
-        """Helper utility to find the FK reference for a given column name."""
+        """Helper utility to find the FK reference."""
         for fk in fks:
             if col_name in fk["constrained_columns"]:
                 return f"{fk['referred_table']}.{fk['referred_columns'][0]}"

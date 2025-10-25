@@ -1,9 +1,7 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, status
 
-from backend.api.deps import get_db_session
 from backend.schemas.schema import SchemaResponse
 from backend.services.schema_discovery import SchemaDiscoveryService
 
@@ -21,7 +19,7 @@ router = APIRouter()
     "constraints, and indexes.",
     tags=["Schema"],
 )
-async def get_database_schema(db: AsyncSession = Depends(get_db_session)):
+async def get_database_schema():
     """
     Endpoint to trigger the dynamic schema discovery process.
 
@@ -31,7 +29,7 @@ async def get_database_schema(db: AsyncSession = Depends(get_db_session)):
     try:
         logger.info("GET /api/schema endpoint called.")
 
-        discovery_service = SchemaDiscoveryService(db)
+        discovery_service = SchemaDiscoveryService()
 
         schema_response = await discovery_service.analyze_database()
 
